@@ -133,3 +133,8 @@ A short, plain-language note for every change: what changed and why. Newest at t
 
 **What:** The README (both languages) now has the icon, CI/release/license badges, real screenshots of the toolbar and preview (31 → 6 tokens), and a no-coding install from the Release zip. Also added: issue templates (bug report, rule/language idea), a PR checklist, CHANGELOG.md, and repo links and keywords in package.json. Private vulnerability reporting is turned on to match SECURITY.md, and v0.1.0 is published as a GitHub Release.
 **Why:** The project is about to be shared with the Claude Thailand community. Most people there won't install Node, so a downloadable zip and clear screenshots matter more than anything else.
+
+## Automatic release zips
+
+**What:** New workflow `.github/workflows/release.yml`. When a release is published, it checks that the tag matches the version in `package.json`, runs the tests, builds the zip with `npm run zip`, runs the privacy audit and attaches the zip to the release. It can also be run by hand for an existing tag. CONTRIBUTING.md now has a short "Releasing" section.
+**Why:** The zip on the release is what most people install. Building it in CI from the tagged code means it always matches the source and has passed the same checks, and nobody has to remember to upload it.

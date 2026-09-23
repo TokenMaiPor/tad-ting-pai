@@ -126,3 +126,11 @@ CSS selectors, tried in order. To fix one:
 - Keep PRs small and focused. CI runs lint, typecheck, unit tests, build, the network audit and the e2e smoke test.
 - Add a short plain-language entry to `docs/maintainer-log.md`: **What** changed and **Why**.
 - By contributing, you agree that your contribution is licensed under the MIT License.
+
+## Releasing
+
+1. Bump `version` in `package.json` and add a section to `CHANGELOG.md`.
+2. Commit, then publish a GitHub release whose tag is `v<version>` (for example `v0.2.0`).
+3. The **Release** workflow checks that the tag matches `package.json`, runs the tests, builds the zip with `npm run zip`, runs the privacy audit and attaches `tad-ting-pai-<version>-chrome.zip` to the release.
+
+To rebuild the zip for an existing release, run the workflow by hand from the Actions tab (**Release → Run workflow**) and enter the tag.
