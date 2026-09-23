@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ChatGPT fixture</title>
+  </head>
+  <body style="font-family: sans-serif; max-width: 760px; margin: 40px auto">
+    <main>
+      <form class="w-full" data-type="unified-composer">
+        <div class="composer">
+          <div
+            contenteditable="true"
+            translate="no"
+            class="ProseMirror"
+            id="prompt-textarea"
+            data-fixture="input"
+            style="min-height: 48px; border: 1px solid #ccc; padding: 8px"
+          >
+            <p></p>
+          </div>
+          <button type="button" data-testid="send-button" data-fixture="send">Send</button>
+        </div>
+      </form>
+    </main>
+    <script>
+      // Fixture harness: counts any submission so tests can prove the extension never sends.
+      window.__sentCount = 0;
+      window.__inputEvents = 0;
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-fixture="send"]')) window.__sentCount++;
+      });
+      document.addEventListener('submit', (e) => {
+        e.preventDefault();
+        window.__sentCount++;
+      });
+      document.addEventListener(
+        'keydown',
+        (e) => {
+          if (e.key === 'Enter' && !e.shiftKey && e.target.closest('[data-fixture="input"]')) {
+            e.preventDefault();
+            window.__sentCount++;
+          }
+        },
+        true,
+      );
+      document.addEventListener('input', () => window.__inputEvents++, true);
+    </script>
+  </body>
+</html>

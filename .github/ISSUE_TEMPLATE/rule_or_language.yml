@@ -1,0 +1,22 @@
+name: "Rule idea / language request"
+description: Suggest a Thai phrase to compress, or ask for another language.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea / ไอเดีย
+      description: "e.g. remove \"ช่วย...หน่อย\" at the end of a request, or add Vietnamese"
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples that should change / ตัวอย่างที่ควรถูกตัด
+      render: text
+  - type: textarea
+    id: keep
+    attributes:
+      label: Examples that must NOT change / ตัวอย่างที่ห้ามตัด
+      description: Near-misses help us keep rules safe (e.g. "คะแนน" contains "คะ").
+      render: text

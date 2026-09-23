@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Gemini fixture</title>
+  </head>
+  <body style="font-family: sans-serif; max-width: 760px; margin: 40px auto">
+    <main>
+      <input-area-v2>
+        <div class="text-input-field">
+          <rich-textarea>
+            <div
+              class="ql-editor textarea"
+              contenteditable="true"
+              role="textbox"
+              aria-label="Enter a prompt here"
+              data-fixture="input"
+              style="min-height: 48px; border: 1px solid #ccc; padding: 8px"
+            >
+              <p><br /></p>
+            </div>
+          </rich-textarea>
+          <button type="button" aria-label="Send message" class="send-button" data-fixture="send">
+            Send
+          </button>
+        </div>
+      </input-area-v2>
+    </main>
+    <script>
+      // Fixture harness: counts any submission so tests can prove the extension never sends.
+      window.__sentCount = 0;
+      window.__inputEvents = 0;
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-fixture="send"]')) window.__sentCount++;
+      });
+      document.addEventListener('submit', (e) => {
+        e.preventDefault();
+        window.__sentCount++;
+      });
+      document.addEventListener(
+        'keydown',
+        (e) => {
+          if (e.key === 'Enter' && !e.shiftKey && e.target.closest('[data-fixture="input"]')) {
+            e.preventDefault();
+            window.__sentCount++;
+          }
+        },
+        true,
+      );
+      document.addEventListener('input', () => window.__inputEvents++, true);
+    </script>
+  </body>
+</html>

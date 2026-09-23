@@ -1,0 +1,40 @@
+/* Design tokens — every value traces to DESIGN.md sections 2–8. */
+:host,
+:root {
+  --ttp-paper: #f3f6f2;
+  --ttp-ink: #1c2621;
+  --ttp-ink-muted: #56635b;
+  --ttp-rule: #c9d3cc;
+  --ttp-ledger: #1d6a4e;
+  --ttp-ledger-ink: #f3f6f2;
+  --ttp-stamp: #b3362b;
+  --ttp-good: #2f7a3e;
+  --ttp-warn: #8f5b00;
+  --ttp-critical: #a3261e;
+
+  --ttp-font-body:
+    'Leelawadee UI', 'Thonburi', 'Noto Sans Thai', 'Sukhumvit Set', system-ui, sans-serif;
+  --ttp-font-figures: 'Cascadia Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  --ttp-radius: 4px;
+  --ttp-radius-panel: 6px;
+  --ttp-shadow-panel: 0 8px 24px rgb(0 0 0 / 0.18);
+  --ttp-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ttp-duration: 150ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :host,
+  :root {
+    --ttp-paper: #171c19;
+    --ttp-ink: #e3eae5;
+    --ttp-ink-muted: #9aa89f;
+    --ttp-rule: #2e3832;
+    --ttp-ledger: #5fbf94;
+    --ttp-ledger-ink: #0f1512;
+    --ttp-stamp: #f07a6e;
+    --ttp-good: #7bc98a;
+    --ttp-warn: #e0a640;
+    --ttp-critical: #f07a6e;
+  }
+}

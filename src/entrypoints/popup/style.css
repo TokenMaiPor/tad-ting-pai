@@ -1,0 +1,168 @@
+@import '../../ui/tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--ttp-paper);
+  color: var(--ttp-ink);
+  font-family: var(--ttp-font-body);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ttp-ledger);
+  outline-offset: 2px;
+}
+
+.popup {
+  width: 320px;
+  padding: 16px;
+}
+
+.wordmark {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* "Ting" (cut) sits on a dashed stamp-red cut line: the name is the product promise. */
+.wordmark .cut {
+  color: var(--ttp-stamp);
+  text-decoration: underline dashed var(--ttp-stamp);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.hero {
+  padding: 12px 0 16px;
+  border-top: 1px dashed var(--ttp-rule);
+  border-bottom: 1px dashed var(--ttp-rule);
+}
+
+.hero-figure {
+  display: block;
+  font-family: var(--ttp-font-figures);
+  font-variant-numeric: tabular-nums;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ttp-stamp);
+}
+
+.hero-label {
+  display: block;
+  font-weight: 600;
+}
+
+.muted {
+  margin: 4px 0 0;
+  color: var(--ttp-ink-muted);
+  font-size: 12px;
+}
+
+.section {
+  margin-top: 16px;
+}
+
+.section h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ttp-ink-muted);
+}
+
+fieldset {
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+.check input {
+  margin: 4px 0 0;
+  accent-color: var(--ttp-ledger);
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--ttp-rule);
+  border-radius: var(--ttp-radius);
+  overflow: hidden;
+}
+
+.segmented label {
+  position: relative;
+  padding: 4px 14px;
+  cursor: pointer;
+}
+
+.segmented label + label {
+  border-left: 1px solid var(--ttp-rule);
+}
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented label:has(input:checked) {
+  background: var(--ttp-ledger);
+  color: var(--ttp-ledger-ink);
+}
+
+.segmented label:has(input:focus-visible) {
+  outline: 2px solid var(--ttp-ledger);
+  outline-offset: -2px;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ttp-rule);
+}
+
+.btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--ttp-rule);
+  border-radius: var(--ttp-radius);
+  background: var(--ttp-paper);
+  color: var(--ttp-ink);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--ttp-duration) var(--ttp-ease);
+}
+
+.btn:hover {
+  border-color: var(--ttp-ink);
+}
+
+.btn[data-armed] {
+  border-color: var(--ttp-critical);
+  color: var(--ttp-critical);
+}

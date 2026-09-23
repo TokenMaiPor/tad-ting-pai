@@ -1,0 +1,59 @@
+{
+  "name": "tad-ting-pai",
+  "version": "0.1.0",
+  "description": "Spend fewer tokens on ChatGPT, Claude and Gemini when you write in Thai. A privacy-first Chrome extension: no network calls.",
+  "keywords": [
+    "chrome-extension",
+    "manifest-v3",
+    "thai",
+    "llm",
+    "tokens",
+    "tokenizer",
+    "chatgpt",
+    "claude",
+    "gemini",
+    "privacy"
+  ],
+  "homepage": "https://github.com/TokenMaiPor/tad-ting-pai#readme",
+  "bugs": {
+    "url": "https://github.com/TokenMaiPor/tad-ting-pai/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TokenMaiPor/tad-ting-pai.git"
+  },
+  "author": "TokenMaiPor",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write . --ignore-path .gitignore --ignore-path .prettierignore --ignore-path .git/info/exclude",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "audit:network": "node scripts/audit-network.mjs",
+    "postinstall": "wxt prepare",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "js-tiktoken": "^1.0.21"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/chrome": "^0.3.0",
+    "@types/node": "^22.20.4",
+    "@vitest/coverage-v8": "^5.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.1",
+    "wxt": "^0.21.4"
+  }
+}

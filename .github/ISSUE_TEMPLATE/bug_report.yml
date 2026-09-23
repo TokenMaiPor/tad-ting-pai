@@ -1,0 +1,39 @@
+name: "Bug / something looks wrong"
+description: The toolbar is missing, a compression changed meaning, a translation looks odd, etc.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying TadTingPai! Please **don't paste private conversations**. A short made-up sentence that shows the problem is perfect.
+        ขอบคุณที่ลองใช้ครับ กรุณาอย่าวางบทสนทนาส่วนตัว ใช้ประโยคตัวอย่างสั้นๆ ที่ทำให้เห็นปัญหาก็พอ
+  - type: dropdown
+    id: site
+    attributes:
+      label: Site / เว็บ
+      options: [ChatGPT, Claude, Gemini, Popup, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: feature
+    attributes:
+      label: Feature / ฟีเจอร์
+      options: ["Toolbar / token count", "Compress (บีบข้อความ)", "Translate (แปลเป็นอังกฤษ)", "Popup / settings", "Other"]
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: What you typed / ข้อความที่พิมพ์
+      render: text
+  - type: textarea
+    id: result
+    attributes:
+      label: What you got vs. what you expected / ผลที่ได้ และที่ควรได้
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Chrome version & TadTingPai version
+      placeholder: "Chrome 141, TadTingPai 0.1.0"
