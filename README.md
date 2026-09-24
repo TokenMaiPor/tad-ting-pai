@@ -3,7 +3,7 @@
 <h1 align="center">TadTingPai</h1>
 
 <p align="center"><em>TadTingPai (Thai for "just cut it out")</em><br>
-Spend fewer tokens on ChatGPT, Claude and Gemini when you write in Thai.</p>
+Spend fewer tokens on ChatGPT, Claude and Gemini when you write in Thai, Vietnamese or Indonesian.</p>
 
 <p align="center">
 
@@ -16,7 +16,7 @@ Spend fewer tokens on ChatGPT, Claude and Gemini when you write in Thai.</p>
 
 <p align="center"><strong>English</strong> · <strong><a href="README.th.md">🇹🇭 อ่านคู่มือภาษาไทย</a></strong></p>
 
-> **v0.1 is an early release.** It works on the three sites today, and we would love to hear how it behaves on your prompts.
+> **v0.2 is an early release.** It works on the three sites today, and we would love to hear how it behaves on your prompts.
 > [Open an issue](https://github.com/TokenMaiPor/tad-ting-pai/issues/new/choose) with anything odd, even a single sentence.
 
 AI chat services charge and rate-limit by **tokens**, and most tokenizers are built around English.
@@ -32,6 +32,11 @@ TadTingPai is a free, open-source Chrome extension that helps you pay less of it
 - **You stay in control**: every change is shown **before and after, with token counts**. Nothing changes until you press
   **Use this text**, and the extension **never sends a message**. You always press send yourself.
 - **Protected text is never touched**: code blocks, `inline code`, URLs, e-mail addresses, numbers and "quoted text".
+- **Thai, Vietnamese and Indonesian** rule packs, picked automatically from what you type. Switch any rule off in the popup.
+- **Keyboard shortcut**: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> opens the Compress preview (change it at `chrome://extensions/shortcuts`).
+- **Savings history**: the popup shows tokens saved over the last 7 days (stored on your device only).
+- **Keeps working when a site changes**: if the strip can't find its usual spot, a small **TadTingPai · Compress** button
+  appears next to the chat box instead, and the popup offers a one-click **Report a broken site** (it never includes what you typed).
 
 ![The TadTingPai strip under a chat box](docs/images/toolbar.png)
 
@@ -82,7 +87,9 @@ Requirements: Node.js 22+.
 3. Type your message as usual. The token count updates as you type.
 4. Press **Compress** (or **Translate to English**). A preview shows the text **Before** and **After** with the token counts.
 5. Press **Use this text** to replace the chat box text, or **Keep original** to leave it unchanged. Then press send yourself.
-6. Click the TadTingPai icon on the toolbar to see total tokens saved, choose which sites show the strip, and switch the interface between ไทย and English.
+6. Click the TadTingPai icon on the toolbar to see tokens saved (total and last 7 days), choose which sites show the strip,
+   switch compression rules on or off, and switch the interface between ไทย and English.
+7. Prefer the keyboard? <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> opens the Compress preview on the current chat.
 
 The **Translate to English** button only appears in Chrome 138+ on desktop, when Chrome's on-device translator supports Thai.
 The first translation may take a while because Chrome downloads its language model once.
@@ -105,19 +112,23 @@ npm run zip          # package for the Chrome Web Store
 src/
   adapters/      one file per site: where the chat box is, where the toolbar goes
   protect/       masks code, URLs, e-mails, numbers and quotes before any rule runs
-  languages/     language packs as data (Thai: src/languages/th/rules.ts)
+  languages/     language packs as data (th, vi, id: src/languages/<code>/rules.ts)
   core/          compression engine, token counter, translator, storage
   ui/            toolbar + before/after preview (Shadow DOM, styled per DESIGN.md)
   entrypoints/   content script, background worker (tokenizer), popup
 ```
 
-The compression engine is language-agnostic. A Thai phrase is only removed when it:
+The compression engine is language-agnostic. A phrase is only removed when it:
 
 1. starts and ends on a real word boundary (`Intl.Segmenter`), so `คะ` never matches inside `คะแนน`;
 2. is in the right position (for example, at the end of a clause for polite particles);
 3. is outside protected text.
 
 If a protected placeholder is damaged for any reason, the extension gives up and keeps your original text.
+
+Vietnamese and Indonesian put spaces between words, so their packs set `wordSpacing`: a clause ends at punctuation or a
+line break, not at a space, and matching ignores case. Indonesian uses plain Latin letters like English, so it is only
+picked when common Indonesian words appear (`markers`). English text is never compressed.
 
 ## Manual release checklist
 
@@ -128,8 +139,11 @@ The sites change their layout often, and automated tests use local copies. Befor
 - [ ] Compress → preview → **Use this text** replaces the text and the site's send button reacts. Nothing is sent.
 - [ ] Translate (Chrome 138+) shows a preview ending in "Reply in Thai."
 - [ ] Start a new chat and switch chats: the toolbar re-attaches.
+- [ ] The popup shows "toolbar OK" for each site you opened (not "fallback button").
+- [ ] <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> opens the preview.
 
-If a site broke, the fix is usually one selector in `src/adapters/<site>.ts`.
+If a site broke, the fix is usually one selector in `src/adapters/<site>.ts`. Store screenshots:
+`npm run build && node scripts/store-screenshots.mjs`, listing text in [docs/store/listing.md](docs/store/listing.md).
 
 ## Contributing
 

@@ -138,3 +138,103 @@ A short, plain-language note for every change: what changed and why. Newest at t
 
 **What:** New workflow `.github/workflows/release.yml`. When a release is published, it checks that the tag matches the version in `package.json`, runs the tests, builds the zip with `npm run zip`, runs the privacy audit and attaches the zip to the release. It can also be run by hand for an existing tag. CONTRIBUTING.md now has a short "Releasing" section.
 **Why:** The zip on the release is what most people install. Building it in CI from the tagged code means it always matches the source and has passed the same checks, and nobody has to remember to upload it.
+
+## v0.2 · Design for the new pieces
+
+**What:** DESIGN.md got a section 10 for the fallback button, the rule switches, the 7-day strip, the rule chips and the site status line. Every value reuses the existing colours, type and spacing.
+**Why:** The design rules say new UI has to trace back to DESIGN.md, so the file had to cover the new pieces before anyone built them.
+
+## v0.2 · Floating fallback button
+
+**What:** The site adapters are now lists of selectors. If the chat box is found but its usual container isn't found within 3 seconds, a small "TadTingPai · Compress" button is pinned near the chat box's top-right corner. It follows the box when the page scrolls or resizes. The old "put it after the input's parent" guess was removed.
+**Why:** The sites change their markup often. Before, the strip disappeared without a word or landed in the wrong spot. Now the feature keeps working until someone updates the selector.
+
+## v0.2 · Site status
+
+**What:** A `diagnose()` helper records which selector found the chat box and its container. The content script saves "ok / fallback / not found" per site, only when the status changes, and the popup shows one line per site.
+**Why:** Maintainers and users can see that a site broke without opening DevTools.
+
+## v0.2 · Report a broken site
+
+**What:** When a site isn't OK, the popup shows a "Report a broken site" link. It opens a new GitHub issue form (`site_broken.yml`) filled in with the site, the status, the matching selectors, the check time and the extension and Chrome versions.
+**Why:** Most broken-site reports would otherwise come in as "it disappeared". The report carries exactly what's needed to fix a selector, and nothing the user typed.
+
+## v0.2 · Tests for a redesigned site
+
+**What:** The e2e tests load each fixture with `?ttp-broken=1`, which renames every composer container. They check that the fallback button appears near the chat box, that Compress → Use this text still works, that nothing is sent, and that the popup's report link contains no chat text.
+**Why:** The fallback only matters when a site breaks, which is exactly when nobody is looking. This checks it on every CI run.
+
+## v0.2 · Rule switches are saved
+
+**What:** Settings have a new `disabledRules` list. Settings saved by v0.1 have no such field, so they read as "every rule on".
+**Why:** Needed for the popup's rule switches, and upgrading must not silently change anyone's results.
+
+## v0.2 · The engine skips switched-off rules
+
+**What:** `compress()` takes `disabledRules` and skips those rules. The content script passes the user's list.
+**Why:** Some people want to keep, for example, their thank-yous. That is now their choice.
+
+## v0.2 · Rule list in the popup
+
+**What:** A collapsible "Compression rules (16/17 on)" list, grouped by language, with a checkbox and one before → after example per rule. The interface language's rules come first. The list stays open when a change re-draws the popup.
+**Why:** People can see what each rule does before turning it off, and the popup stays short when the list is closed.
+
+## v0.2 · Rule chips in the preview
+
+**What:** The list of changes under the preview is now a row of small outlined chips, like "Removed polite particles ×3".
+**Why:** It's easier to see which rules fired, which is also the first step to switching one off.
+
+## v0.2 · Keyboard shortcut
+
+**What:** A manifest command, Alt+Shift+K by default, opens the Compress preview on the current chat tab. The background worker forwards it to the tab. It only opens the preview and never applies or sends anything.
+**Why:** Opening the preview without reaching for the mouse is quicker for people who write long prompts. A command is not a permission, so the manifest's privacy footprint is unchanged.
+
+## v0.2 · The engine handles languages with spaces between words
+
+**What:** Packs can set `wordSpacing`, which makes clause edges punctuation or line breaks instead of spaces and makes matching case-insensitive. There are two new rule positions: `clause-head` (a clause start that needs something after it) and `clause-tail` (a clause end that needs something before it). Packs in a shared script can list `markers`, common words that must appear before the pack is used. Thai results are byte-for-byte unchanged.
+**Why:** In Thai a space ends a clause. In Vietnamese and Indonesian it only separates words, so the Thai logic would have removed words in the middle of sentences. Markers keep English text from being "compressed" with Indonesian rules.
+
+## v0.2 · Vietnamese
+
+**What:** Four rules: greetings ("Xin chào,"), request openers ("Làm ơn", "Cho mình hỏi"), polite particles at the end of a clause ("ạ", "nhé", "nha") and thanks ("Cảm ơn bạn!"). "Dạ" is left out because it also means "yes".
+**Why:** Vietnamese prompts carry the same kind of polite padding as Thai ones. On the store demo sentence it saves 13 of 29 tokens (o200k estimate).
+
+## v0.2 · Indonesian
+
+**What:** Four rules: greetings, request openers ("Tolong", "Bisakah kamu"; a lone "Tolong!" meaning "Help!" is kept), particles ("dong", "sih", "deh") and thanks. "ya" and "mohon" are left out because they carry meaning in some sentences.
+**Why:** Indonesian has common openers and particles that are safe to drop, and it shows that a pack also works for a language written in plain Latin letters.
+
+## v0.2 · Tests for the new languages
+
+**What:** A shared `describePack()` turns each rule's examples and keep-cases into tests for any pack. Each new language also has detection tests, a full-pipeline test showing that code, links and numbers stay byte-identical, and a Translator availability test.
+**Why:** Contributors can add a language by writing data. The tests come with the data automatically.
+
+## v0.2 · Rule labels per language
+
+**What:** The popup shows each rule's own label: the Thai label when the interface is Thai, the English label otherwise. The interface itself stays Thai/English.
+**Why:** It keeps the interface small while still showing rules from every pack.
+
+## v0.2 · Daily savings
+
+**What:** The stats now include per-day totals (by local date), trimmed to the last 30 days every time something is recorded. Days with no savings aren't stored. "Reset counter" clears them too.
+**Why:** Needed for the 7-day strip. The 30-day cap keeps storage tiny.
+
+## v0.2 · 7-day strip in the popup
+
+**What:** Seven thin bars under the savings total, with today in stamp red and Thai or English day initials. A hidden table gives screen readers the numbers.
+**Why:** A single running total doesn't show whether the habit sticks. A week at a glance does.
+
+## v0.2 · Store screenshots
+
+**What:** `scripts/store-screenshots.mjs` builds five 1280×800 screenshots from the fixture pages (offline, no site branding) into `docs/store/screenshots/`. The popup is rendered at 2× so it stays sharp.
+**Why:** The Chrome Web Store needs screenshots, and a script means they can be regenerated after every UI change instead of drifting out of date.
+
+## v0.2 · Store listing and privacy policy
+
+**What:** `docs/store/listing.md` has everything the store dashboard asks for, in EN and TH: summary, description, single-purpose statement, permission reasons and the data-use answers (no data collected). `docs/store/privacy.md` is the privacy policy page to link.
+**Why:** Publishing needs the maintainer's own developer account, but everything else can be ready so that step takes minutes.
+
+## v0.2 · Version 0.2.0
+
+**What:** The version is now 0.2.0 in package.json and the lockfile. There's a CHANGELOG entry, both READMEs list the new features and release checks, and the manifest description mentions the three languages.
+**Why:** The release workflow requires the tag to match package.json, and users read the README first.

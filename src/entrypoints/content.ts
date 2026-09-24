@@ -4,16 +4,25 @@
 // ever does to the page is replace the chat box text after the user presses "Use this text".
 import { browser } from 'wxt/browser';
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import { adapterForHost, adapters, getInputText, setInputText } from '../adapters';
+import { adapterForHost, adapters, diagnose, getInputText, setInputText } from '../adapters';
+import type { Diagnosis } from '../adapters';
+import { isCompressRequest } from '../core/commands';
 import { compress } from '../core/compress';
-import { getSettings, onStorageChange, recordApply, type Settings } from '../core/storage';
+import {
+  getSettings,
+  onStorageChange,
+  recordApply,
+  saveSiteStatus,
+  type Settings,
+  type SiteStatus,
+} from '../core/storage';
 import { COUNT_MESSAGE, debounce, type CountRequest, type CountResponse } from '../core/tokens';
 import { canTranslate, getTranslatorApi, translateMessage } from '../core/translate';
 import { t } from '../i18n';
 import { detectPack, languagePacks } from '../languages/registry';
 import type { LanguagePack } from '../languages/types';
 import { openPreview, type PreviewHandle } from '../ui/preview-panel';
-import { createToolbar, type Toolbar } from '../ui/toolbar';
+import { createToolbar, type Toolbar, type ToolbarVariant } from '../ui/toolbar';
 
 export default defineContentScript({
   matches: [
@@ -67,7 +76,7 @@ export default defineContentScript({
       mode: 'compress' | 'translate',
       original: string,
       next: string,
-      extra: { changes?: string[]; warning?: string },
+      extra: { changes?: { label: string; count: number }[]; warning?: string },
     ) {
       if (!toolbar) return;
       const counts = requestCounts([original, next]).then((c) =>
@@ -137,12 +146,12 @@ export default defineContentScript({
       const original = getInputText(input);
       if (original.trim() === '') return toolbar.setStatus(t(lang(), 'status.empty'));
 
-      const result = compress(original);
+      const result = compress(original, { disabledRules: settings.disabledRules });
       if (result.aborted) return toolbar.setStatus(t(lang(), 'status.aborted'), 'warn');
       if (!result.changed) return toolbar.setStatus(t(lang(), 'status.nothingToCompress'));
 
       showPreview('compress', original, result.text, {
-        changes: result.applied.map((r) => `${labelFor(r, result.pack)} ×${r.count}`),
+        changes: result.applied.map((r) => ({ label: labelFor(r, result.pack), count: r.count })),
       });
     }
 
@@ -187,44 +196,110 @@ export default defineContentScript({
       lastCounted = null;
     }
 
-    function ensureMounted() {
-      if (!settings.sites[adapter!.id]) return unmount();
-      const found = adapter!.findInput(document);
-      if (!found) return;
-      if (found !== input) {
-        input = found;
-        lastCounted = null;
-      }
-      const anchor = adapter!.findMountAnchor(found);
-      if (!anchor) return;
+    // If the chat box is there but its usual container isn't (the site changed its markup),
+    // wait a moment in case it is still rendering, then fall back to a floating button.
+    const FALLBACK_DELAY_MS = 3_000;
+    // Only report "chat box not found" once the page has had time to render it.
+    const NOT_FOUND_DELAY_MS = 10_000;
+    const startedAt = Date.now();
+    let anchorMissingSince: number | null = null;
+    let recheckTimer: ReturnType<typeof setTimeout> | undefined;
+    let lastReported: string | null = null;
+
+    function recheckIn(ms: number) {
+      clearTimeout(recheckTimer);
+      recheckTimer = setTimeout(() => ensureMounted(), ms);
+    }
+
+    function report(state: SiteStatus['state'], d: Diagnosis) {
+      const key = `${state}|${d.inputSelector}|${d.anchorSelector}`;
+      if (key === lastReported) return;
+      lastReported = key;
+      void saveSiteStatus(adapter!.id, {
+        state,
+        inputSelector: d.inputSelector,
+        anchorSelector: d.anchorSelector,
+        checkedAt: Date.now(),
+      }).catch(() => undefined);
+    }
+
+    function useToolbar(variant: ToolbarVariant): Toolbar {
+      if (toolbar && toolbar.variant !== variant) unmount();
       if (!toolbar) {
-        toolbar = createToolbar(lang(), {
-          onCompress: () => void onCompress(),
-          onTranslate: () => void onTranslate(),
-        });
+        toolbar = createToolbar(
+          lang(),
+          { onCompress: () => void onCompress(), onTranslate: () => void onTranslate() },
+          variant,
+        );
         toolbar.setTranslateVisible(translatablePacks.length > 0);
       }
-      if (anchor.nextElementSibling !== toolbar.host) anchor.after(toolbar.host);
+      return toolbar;
+    }
+
+    function ensureMounted() {
+      if (!settings.sites[adapter!.id]) return unmount();
+      const d = diagnose(adapter!, document);
+      if (!d.input) {
+        const waited = Date.now() - startedAt;
+        if (waited >= NOT_FOUND_DELAY_MS) report('not-found', d);
+        else recheckIn(NOT_FOUND_DELAY_MS - waited);
+        return;
+      }
+      if (d.input !== input) {
+        input = d.input;
+        lastCounted = null;
+      }
+
+      if (d.anchor) {
+        anchorMissingSince = null;
+        const bar = useToolbar('bar');
+        if (d.anchor.nextElementSibling !== bar.host) d.anchor.after(bar.host);
+        report('ok', d);
+      } else {
+        if (toolbar?.variant !== 'floating') {
+          anchorMissingSince ??= Date.now();
+          const waited = Date.now() - anchorMissingSince;
+          if (waited < FALLBACK_DELAY_MS) return recheckIn(FALLBACK_DELAY_MS - waited);
+        }
+        const floating = useToolbar('floating');
+        if (!floating.host.isConnected) document.body.append(floating.host);
+        floating.placeNear(d.input.getBoundingClientRect());
+        report('fallback', d);
+      }
       updateCount();
     }
 
     // Chat sites are single-page apps: the composer is re-rendered on navigation, so watch
     // the DOM and re-attach when needed (batched to one check per animation frame).
     let scheduled = false;
-    const observer = new MutationObserver(() => {
+    const schedule = () => {
       if (scheduled) return;
       scheduled = true;
       requestAnimationFrame(() => {
         scheduled = false;
         ensureMounted();
       });
-    });
+    };
+    const observer = new MutationObserver(schedule);
     observer.observe(document.body, { childList: true, subtree: true });
+    // The floating fallback follows the chat box when the page scrolls or resizes.
+    const onViewportChange = () => {
+      if (toolbar?.variant === 'floating') schedule();
+    };
+    window.addEventListener('resize', onViewportChange, { passive: true });
+    window.addEventListener('scroll', onViewportChange, { passive: true, capture: true });
 
     const onInput = (event: Event) => {
       if (input && event.target instanceof Node && input.contains(event.target)) updateCount();
     };
     document.addEventListener('input', onInput, true);
+
+    // Keyboard shortcut (forwarded by the background worker): same as pressing Compress.
+    const onMessage = (message: unknown, sender: { id?: string }) => {
+      if (sender.id !== browser.runtime.id || !isCompressRequest(message) || !toolbar) return;
+      void onCompress();
+    };
+    browser.runtime.onMessage.addListener(onMessage);
 
     const stopWatching = onStorageChange((change) => {
       if (!change.settings) return;
@@ -235,8 +310,12 @@ export default defineContentScript({
 
     ctx.onInvalidated(() => {
       observer.disconnect();
+      clearTimeout(recheckTimer);
+      window.removeEventListener('resize', onViewportChange);
+      window.removeEventListener('scroll', onViewportChange, { capture: true });
       document.removeEventListener('input', onInput, true);
       stopWatching();
+      browser.runtime.onMessage.removeListener(onMessage);
       updateCount.cancel();
       unmount();
     });

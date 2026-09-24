@@ -1,0 +1,31 @@
+name: "Site changed: toolbar missing or in the wrong place"
+description: ChatGPT, Claude or Gemini changed their page and TadTingPai can't find the chat box. The popup's "Report a broken site" link fills this in for you.
+labels: ["bug", "site-adapter"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This report only contains which page selectors matched. It never includes anything you typed.
+        รายงานนี้มีแค่ข้อมูลว่าตัวเลือกบนหน้าเว็บตัวไหนเจอบ้าง ไม่มีข้อความที่คุณพิมพ์
+  - type: dropdown
+    id: site
+    attributes:
+      label: Site / เว็บ
+      options: [ChatGPT, Claude, Gemini]
+    validations:
+      required: true
+  - type: input
+    id: status
+    attributes:
+      label: Status shown in the popup / สถานะที่ popup แสดง
+      placeholder: fallback button
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics (filled in automatically) / ข้อมูลวินิจฉัย
+      render: text
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else? / อื่นๆ
+      description: e.g. "happens only in a project chat". Please don't paste private conversations.

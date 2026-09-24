@@ -31,6 +31,7 @@ interface Match {
 // Private-use placeholders from the protect module count as separators.
 const WORD_CHAR = /[\p{L}\p{N}\p{M}]/u;
 const isSeparator = (char: string | undefined) => char === undefined || !WORD_CHAR.test(char);
+const isSpace = (c: string | undefined) => c === ' ' || c === '\t';
 
 const segmenterCache = new Map<string, Intl.Segmenter>();
 function segmenterFor(locale: string): Intl.Segmenter {
@@ -55,14 +56,44 @@ function sortedPhrases(rule: CompressionRule): string[] {
   return Object.keys(rule.replacements).sort((a, b) => b.length - a.length);
 }
 
+// In word-spaced languages a clause edge is the text edge, a line break or punctuation,
+// looking past any spaces in between.
+const CLAUSE_MARK = /[\p{P}\n]/u;
+function clauseEdgeBefore(text: string, i: number): boolean {
+  let j = i - 1;
+  while (isSpace(text[j])) j -= 1;
+  return j < 0 || CLAUSE_MARK.test(text[j]!);
+}
+function clauseEdgeAfter(text: string, i: number): boolean {
+  let j = i;
+  while (isSpace(text[j])) j += 1;
+  return j >= text.length || CLAUSE_MARK.test(text[j]!);
+}
+
+/**
+ * Lower-cased copy for case-insensitive matching, but only when lower-casing keeps every
+ * character at the same index (it almost always does; "İ" is the classic exception).
+ */
+function matchText(text: string, pack: LanguagePack): string {
+  if (!pack.wordSpacing) return text;
+  const lower = text.toLocaleLowerCase(pack.code);
+  return lower.length === text.length ? lower : text;
+}
+
 function findMatches(text: string, rule: CompressionRule, pack: LanguagePack): Match[] {
   const boundaries = wordBoundaries(text, pack.code);
   const phrases = sortedPhrases(rule);
   const matches: Match[] = [];
+  const hay = matchText(text, pack);
 
   const positionOk = (start: number, end: number) => {
-    const clauseStart = start === 0 || isSeparator(text[start - 1]);
-    const clauseEnd = end === text.length || isSeparator(text[end]);
+    const clauseStart = pack.wordSpacing
+      ? clauseEdgeBefore(text, start)
+      : start === 0 || isSeparator(text[start - 1]);
+    const clauseEnd = pack.wordSpacing
+      ? // A phrase may carry its own punctuation ("xin chào,"), which ends the clause itself.
+        clauseEdgeAfter(text, end) || CLAUSE_MARK.test(text[end - 1] ?? '')
+      : end === text.length || isSeparator(text[end]);
     switch (rule.position) {
       case 'clause-start':
         return clauseStart;
@@ -70,6 +101,10 @@ function findMatches(text: string, rule: CompressionRule, pack: LanguagePack): M
         return clauseEnd;
       case 'standalone':
         return clauseStart && clauseEnd;
+      case 'clause-head':
+        return clauseStart && !clauseEnd;
+      case 'clause-tail':
+        return clauseEnd && !clauseStart;
       default:
         return true;
     }
@@ -90,7 +125,7 @@ function findMatches(text: string, rule: CompressionRule, pack: LanguagePack): M
     let matched: Match | undefined;
     if (startOk(i)) {
       for (const phrase of phrases) {
-        if (!text.startsWith(phrase, i)) continue;
+        if (!hay.startsWith(phrase, i)) continue;
         const end = i + phrase.length;
         if (!boundaries.has(end)) continue;
         if (!positionOk(i, end)) continue;
@@ -109,13 +144,11 @@ function findMatches(text: string, rule: CompressionRule, pack: LanguagePack): M
   return matches;
 }
 
-const isSpace = (c: string | undefined) => c === ' ' || c === '\t';
-
 /**
  * Apply matches right-to-left. When a phrase is removed outright, tidy the whitespace it
  * leaves behind (only at that spot, never elsewhere in the message).
  */
-function applyMatches(text: string, matches: Match[]): string {
+function applyMatches(text: string, matches: Match[], wordSpacing = false): string {
   let out = text;
   for (let m = matches.length - 1; m >= 0; m -= 1) {
     const match = matches[m]!;
@@ -132,6 +165,9 @@ function applyMatches(text: string, matches: Match[]): string {
         end += 1;
       } else if (isSpace(prev) && (next === undefined || next === '\n')) {
         // "a ครับ" → "a"
+        while (isSpace(out[start - 1])) start -= 1;
+      } else if (wordSpacing && isSpace(prev) && next !== undefined && CLAUSE_MARK.test(next)) {
+        // "ngắn gọn nhé." → "ngắn gọn."
         while (isSpace(out[start - 1])) start -= 1;
       }
       if (end === out.length && out[start - 1] === '\n' && start > 0 && lineStart) {
@@ -152,7 +188,7 @@ export function applyRule(
 ): { text: string; count: number } {
   const matches = findMatches(masked, rule, pack);
   if (matches.length === 0) return { text: masked, count: 0 };
-  return { text: applyMatches(masked, matches), count: matches.length };
+  return { text: applyMatches(masked, matches, pack.wordSpacing), count: matches.length };
 }
 
 export interface CompressOptions {
@@ -160,6 +196,8 @@ export interface CompressOptions {
   pack?: LanguagePack;
   /** Only run these rule ids (used by tests to check one rule in isolation). */
   onlyRules?: string[];
+  /** Rule ids the user switched off in the popup. */
+  disabledRules?: readonly string[];
 }
 
 export function compress(text: string, options: CompressOptions = {}): CompressResult {
@@ -177,6 +215,7 @@ export function compress(text: string, options: CompressOptions = {}): CompressR
   const applied: AppliedRule[] = [];
   for (const rule of pack.rules) {
     if (options.onlyRules && !options.onlyRules.includes(rule.id)) continue;
+    if (options.disabledRules?.includes(rule.id)) continue;
     const result = applyRule(masked, rule, pack);
     if (result.count > 0) {
       applied.push({ id: rule.id, label: rule.label, count: result.count });

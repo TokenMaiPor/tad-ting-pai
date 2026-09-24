@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt';
+import { COMPRESS_COMMAND, COMPRESS_SHORTCUT } from './src/core/commands';
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -6,7 +7,7 @@ export default defineConfig({
   manifest: {
     name: 'TadTingPai',
     description:
-      'Use fewer tokens on ChatGPT, Claude and Gemini when you write in Thai. Runs locally. Nothing leaves your device.',
+      'Use fewer tokens on ChatGPT, Claude and Gemini in Thai, Vietnamese or Indonesian. Runs locally. Nothing leaves your device.',
     // Only local storage. Site access comes from the content script matches.
     permissions: ['storage'],
     minimum_chrome_version: '120',
@@ -16,6 +17,13 @@ export default defineConfig({
       32: 'icon/32.png',
       48: 'icon/48.png',
       128: 'icon/128.png',
+    },
+    // A keyboard shortcut is not a permission; it only opens the preview on the current chat tab.
+    commands: {
+      [COMPRESS_COMMAND]: {
+        suggested_key: { default: COMPRESS_SHORTCUT },
+        description: 'Compress the message in the chat box (opens the preview)',
+      },
     },
     action: {
       default_title: 'TadTingPai',

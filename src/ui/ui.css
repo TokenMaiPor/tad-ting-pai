@@ -272,6 +272,9 @@ button {
 }
 
 .changes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -279,12 +282,18 @@ button {
   font-size: 12px;
 }
 
+/* Rule chips (DESIGN.md §10): one outlined chip per rule that fired. */
 .changes li {
-  display: inline;
+  padding: 0 6px;
+  border: 1px solid var(--ttp-rule);
+  border-radius: var(--ttp-radius);
+  line-height: 20px;
 }
 
-.changes li + li::before {
-  content: ' · ';
+.changes .times {
+  margin-left: 4px;
+  font-family: var(--ttp-font-figures);
+  font-variant-numeric: tabular-nums;
 }
 
 .warning {
@@ -314,4 +323,42 @@ button {
   height: 36px;
   padding: 0 14px;
   font-size: 14px;
+}
+
+/* Fallback stub (DESIGN.md §10): one button pinned near the chat box when the composer
+   container can't be found. Same perforated edge, no shadow, no icon. */
+.toolbar-floating {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.toolbar-floating .btn {
+  background: var(--ttp-paper);
+  border-style: dashed;
+}
+
+.toolbar-floating .status:empty {
+  display: none;
+}
+
+/* Out of flow, to the left of the button: placeNear() measured the host without a status,
+   so a status in flow would widen it past the viewport's right edge. */
+.toolbar-floating .status {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+  width: max-content;
+  max-width: 280px;
+  padding: 2px 8px;
+  background: var(--ttp-paper);
+  border: 1px solid var(--ttp-rule);
+  border-radius: var(--ttp-radius);
 }

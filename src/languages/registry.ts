@@ -12,7 +12,16 @@ export function getPack(code: string): LanguagePack | undefined {
   return languagePacks.find((p) => p.code === code);
 }
 
-/** Pick the pack whose script appears most in the text. Returns undefined for e.g. pure English. */
+function markersFound(text: string, words: string[]): number {
+  const present = new Set(text.toLowerCase().split(/[^\p{L}\p{M}]+/u));
+  return words.filter((w) => present.has(w)).length;
+}
+
+/**
+ * Pick the pack whose script appears most in the text. Packs with `markers` (shared scripts
+ * such as Latin) only count when enough of their marker words appear. Returns undefined for
+ * e.g. pure English.
+ */
 export function detectPack(
   text: string,
   packs: LanguagePack[] = languagePacks,
@@ -20,6 +29,7 @@ export function detectPack(
   let best: LanguagePack | undefined;
   let bestCount = 0;
   for (const pack of packs) {
+    if (pack.markers && markersFound(text, pack.markers.words) < pack.markers.min) continue;
     const global = new RegExp(
       pack.script.source,
       pack.script.flags.includes('g') ? pack.script.flags : pack.script.flags + 'g',

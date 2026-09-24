@@ -11,6 +11,16 @@ const SITES = [
 
 const fixture = (id: string) => readFileSync(path.resolve(`tests/fixtures/${id}.html`), 'utf8');
 
+/**
+ * Simulate a site redesign: rename every composer container the adapters look for, so the
+ * chat box is still there but the toolbar's usual anchor is gone.
+ */
+const breakAnchors = (html: string) =>
+  html.replace(
+    /<(\/?)(form|fieldset|input-area-v2|rich-textarea|input-container)\b/g,
+    '<$1section',
+  );
+
 const test = base.extend<{ context: BrowserContext; extensionId: string }>({
   // eslint-disable-next-line no-empty-pattern
   context: async ({}, use) => {
@@ -26,7 +36,9 @@ const test = base.extend<{ context: BrowserContext; extensionId: string }>({
       if (url.protocol === 'chrome-extension:') return route.continue();
       const site = SITES.find((s) => new URL(s.url).hostname === url.hostname);
       if (site && route.request().resourceType() === 'document') {
-        return route.fulfill({ status: 200, contentType: 'text/html', body: fixture(site.id) });
+        const html = fixture(site.id);
+        const body = url.searchParams.has('ttp-broken') ? breakAnchors(html) : html;
+        return route.fulfill({ status: 200, contentType: 'text/html', body });
       }
       return route.abort();
     });
@@ -157,7 +169,7 @@ test('popup shows savings and switches the page UI to Thai', async ({ context, e
   await popup.screenshot({ path: 'test-results/popup-en.png' });
 
   await popup.getByText('ไทย', { exact: true }).click();
-  await expect(popup.getByText('โทเคนที่ประหยัดได้')).toBeVisible();
+  await expect(popup.getByText('โทเคนที่ประหยัดได้', { exact: true })).toBeVisible();
   await popup.screenshot({ path: 'test-results/popup-th.png' });
 
   await page.bringToFront();
@@ -176,4 +188,139 @@ test('turning a site off in the popup removes the toolbar', async ({ context, ex
 
   await page.bringToFront();
   await expect(page.locator('tad-ting-pai')).toHaveCount(0);
+});
+
+for (const site of SITES) {
+  test(`${site.id}: when the composer container is gone, a floating button still works`, async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`${site.url}?ttp-broken=1`);
+    const input = page.locator('[data-fixture="input"]');
+    await input.click();
+    await page.keyboard.insertText(DRAFT);
+
+    // No bar under the chat box; after the grace period the floating fallback appears.
+    await expect(page.locator('tad-ting-pai[data-variant="bar"]')).toHaveCount(0);
+    const floating = page.locator('tad-ting-pai[data-variant="floating"]');
+    await expect(floating).toBeVisible({ timeout: 10_000 });
+
+    // Pinned to the chat box's top-right corner (above it, or just inside when there's no room)
+    // and fully inside the viewport.
+    await page.screenshot({ path: `test-results/${site.id}-fallback.png` });
+    const [box, inputBox] = await Promise.all([floating.boundingBox(), input.boundingBox()]);
+    const viewport = page.viewportSize();
+    expect(box && inputBox && viewport).toBeTruthy();
+    expect(Math.abs(box!.x + box!.width - (inputBox!.x + inputBox!.width))).toBeLessThanOrEqual(1);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.y).toBeLessThan(inputBox!.y + inputBox!.height);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width);
+    await page.screenshot({ path: `test-results/${site.id}-fallback.png` });
+
+    await page.locator('[data-ttp="compress"]').click();
+    await expect(page.locator('[data-ttp="after"]')).toHaveText(EXPECTED);
+    await page.locator('[data-ttp="apply"]').click();
+    await expect(input).toHaveText(EXPECTED);
+    expect(
+      await page.evaluate(() => (window as unknown as { __sentCount: number }).__sentCount),
+    ).toBe(0);
+
+    // The popup reports the fallback and offers a prefilled report without any chat text.
+    const popup = await context.newPage();
+    await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+    await expect(popup.locator(`[data-ttp="status-${site.id}"]`)).toContainText('fallback button');
+    const href = await popup.locator(`[data-ttp="report-${site.id}"]`).getAttribute('href');
+    expect(href).toContain('template=site_broken.yml');
+    expect(decodeURIComponent(href ?? '')).not.toContain('บทความ');
+  });
+}
+
+test('a rule switched off in the popup no longer fires; the preview shows rule chips', async ({
+  context,
+  extensionId,
+}) => {
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await popup.locator('[data-ttp="rules"] summary').click();
+  await expect(popup.locator('[data-ttp="rules"] summary')).toContainText('17/17');
+  await popup.locator('input[data-rule="th.greetings"]').uncheck();
+  await expect(popup.locator('[data-ttp="rules"] summary')).toContainText('16/17');
+  // The list stays open after the re-render that saving triggers.
+  await expect(popup.locator('input[data-rule="th.greetings"]')).toBeVisible();
+  await popup.screenshot({ path: 'test-results/popup-rules.png', fullPage: true });
+
+  const page = await context.newPage();
+  await page.goto(SITES[0].url);
+  await page.locator('[data-fixture="input"]').click();
+  await page.keyboard.insertText(DRAFT);
+  await page.locator('[data-ttp="compress"]').click();
+  await expect(page.locator('[data-ttp="after"]')).toHaveText(/^สวัสดี สรุปบทความนี้/);
+  const chips = page.locator('[data-ttp="rule-chip"]');
+  await expect(chips.first()).toBeVisible();
+  await expect(chips.filter({ hasText: 'greeting' })).toHaveCount(0);
+  await expect(chips.filter({ hasText: 'polite particles' })).toContainText('×3');
+});
+
+test('the keyboard shortcut is declared and opens the preview on the chat tab', async ({
+  context,
+}) => {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  const commands = await worker.evaluate(() => chrome.runtime.getManifest().commands);
+  expect(commands?.['compress-message']?.suggested_key).toEqual({ default: 'Alt+Shift+K' });
+
+  const page = await context.newPage();
+  await page.goto(SITES[1].url);
+  await page.locator('[data-fixture="input"]').click();
+  await page.keyboard.insertText(DRAFT);
+  await expect(page.locator('tad-ting-pai')).toBeAttached();
+
+  // Chrome delivers real shortcuts through its own UI, which automation can't press, so
+  // send what the background worker sends when the command fires.
+  // Like the background worker, target the active tab (no "tabs" permission needed).
+  await page.bringToFront();
+  await worker.evaluate(async () => {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    await chrome.tabs.sendMessage(tab!.id!, { type: 'ttp:compress' });
+  });
+  await expect(page.locator('[data-ttp="panel"]')).toBeVisible();
+  await expect(page.locator('[data-ttp="after"]')).toHaveText(EXPECTED);
+  await expect(page.locator('[data-fixture="input"]')).toHaveText(DRAFT);
+});
+
+test('popup shows the last 7 days of savings', async ({ context, extensionId }) => {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  await worker.evaluate(async () => {
+    const key = (offset: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() - offset);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+    await chrome.storage.local.set({
+      stats: {
+        tokensSaved: 540,
+        applyCount: 23,
+        daily: { [key(0)]: 120, [key(1)]: 60, [key(3)]: 240, [key(6)]: 30, [key(40)]: 90 },
+      },
+    });
+  });
+
+  const popup = await context.newPage();
+  await popup.setViewportSize({ width: 320, height: 640 });
+  await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  const bars = popup.locator('[data-ttp="week"] .bar');
+  await expect(bars).toHaveCount(7);
+  const values = await bars.evaluateAll((els) => els.map((el) => el.getAttribute('data-value')));
+  expect(values).toEqual(['30', '0', '0', '240', '0', '60', '120']);
+  // The busiest day is full height; the table carries the numbers for screen readers.
+  expect(await bars.nth(3).evaluate((el) => el.getBoundingClientRect().height)).toBe(32);
+  await expect(popup.locator('[data-ttp="week"] table tr')).toHaveCount(7);
+  await popup.screenshot({ path: 'test-results/popup-week.png' });
+
+  await popup.getByText('ไทย', { exact: true }).click();
+  await expect(popup.locator('[data-ttp="week"] figcaption')).toHaveText(
+    'โทเคนที่ประหยัดได้ 7 วันล่าสุด',
+  );
+  await popup.screenshot({ path: 'test-results/popup-week-th.png' });
 });

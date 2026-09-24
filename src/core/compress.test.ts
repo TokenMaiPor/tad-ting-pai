@@ -125,3 +125,23 @@ describe('registry.detectPack', () => {
     expect(detectPack('ab ช่วยสรุปหน่อยครับ', [th, latin])?.code).toBe('th');
   });
 });
+
+describe('compress: user-disabled rules', () => {
+  const text = 'สวัสดีครับ ช่วยสรุปให้หน่อยครับ';
+
+  it('skips disabled rules and reports only the rules that fired', () => {
+    const all = compress(text);
+    expect(all.applied.map((r) => r.id)).toContain('th.greetings');
+
+    const result = compress(text, { disabledRules: ['th.greetings'] });
+    expect(result.text.startsWith('สวัสดี')).toBe(true);
+    expect(result.applied.map((r) => r.id)).not.toContain('th.greetings');
+    expect(result.applied.length).toBeGreaterThan(0);
+  });
+
+  it('turning every rule off leaves the text unchanged', () => {
+    const ids = compress(text).pack!.rules.map((r) => r.id);
+    const result = compress(text, { disabledRules: ids });
+    expect(result).toMatchObject({ text, changed: false, applied: [] });
+  });
+});

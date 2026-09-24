@@ -10,8 +10,15 @@
  * - `clause-start`: at the start of the text or right after whitespace/punctuation.
  * - `clause-end`: at the end of the text or right before whitespace/punctuation.
  * - `standalone`: both clause-start and clause-end (the match is a whole clause by itself).
+ * - `clause-head`: clause-start but NOT clause-end, so something must follow in the same clause
+ *   (e.g. Indonesian "Tolong buatkan …" loses "Tolong", but a lone "Tolong!" means "Help!").
+ * - `clause-tail`: clause-end but NOT clause-start (e.g. "Kenapa sih?" loses "sih").
+ *
+ * In packs with `wordSpacing` a space separates words, not clauses, so clause edges are only
+ * the text edges, line breaks and punctuation.
  */
-export type RulePosition = 'anywhere' | 'clause-start' | 'clause-end' | 'standalone';
+export type RulePosition =
+  'anywhere' | 'clause-start' | 'clause-end' | 'standalone' | 'clause-head' | 'clause-tail';
 
 export interface RuleExample {
   input: string;
@@ -46,6 +53,17 @@ export interface LanguagePack {
   name: { en: string; native: string };
   /** Characters that identify the script. Used to decide whether the pack applies. */
   script: RegExp;
+  /**
+   * For languages written in a script many languages share (e.g. Latin): the pack is only
+   * picked when at least `min` distinct marker words appear, so English is never "compressed"
+   * with Indonesian rules. Matched case-insensitively on whole words.
+   */
+  markers?: { words: string[]; min: number };
+  /**
+   * The language puts spaces between words (Vietnamese, Indonesian), unlike Thai where a space
+   * ends a clause. Also makes phrase matching case-insensitive (write phrases in lower case).
+   */
+  wordSpacing?: boolean;
   /**
    * Optional syllable-break hints for scripts without spaces. Dictionary segmenters do not
    * know every particle ("อะ" is often glued to the word before it), so clause-end rules may

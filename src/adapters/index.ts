@@ -5,5 +5,5 @@ import type { SiteAdapter } from './types';
 
 export const adapters: SiteAdapter[] = [chatgptAdapter, claudeAdapter, geminiAdapter];
 
-export { adapterForHost, getInputText, setInputText } from './types';
-export type { SiteAdapter } from './types';
+export { adapterForHost, diagnose, getInputText, setInputText } from './types';
+export type { Diagnosis, SiteAdapter } from './types';

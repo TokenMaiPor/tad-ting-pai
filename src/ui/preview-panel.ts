@@ -11,8 +11,8 @@ export interface PreviewOptions {
   /** Omit while counting; fill in later with `setCounts`. */
   beforeTokens?: number;
   afterTokens?: number;
-  /** Short human-readable list of what changed, e.g. "Removed polite particles ×3". */
-  changes?: string[];
+  /** The rules that fired, shown as chips, e.g. "Polite particles ×3". */
+  changes?: { label: string; count: number }[];
   warning?: string;
   onApply: () => void;
   onCancel: () => void;
@@ -92,7 +92,14 @@ export function openPreview(options: PreviewOptions): PreviewHandle {
       ? h(
           'ul',
           { class: 'changes', 'aria-label': t(lang, 'panel.changes') },
-          ...options.changes.map((c) => h('li', { text: c })),
+          ...options.changes.map((c) =>
+            h(
+              'li',
+              { 'data-ttp': 'rule-chip' },
+              c.label,
+              h('span', { class: 'times', text: `×${c.count}` }),
+            ),
+          ),
         )
       : null;
 

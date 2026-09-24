@@ -1,11 +1,13 @@
 {
   "name": "tad-ting-pai",
-  "version": "0.1.0",
-  "description": "Spend fewer tokens on ChatGPT, Claude and Gemini when you write in Thai. A privacy-first Chrome extension: no network calls.",
+  "version": "0.2.0",
+  "description": "Spend fewer tokens on ChatGPT, Claude and Gemini when you write in Thai, Vietnamese or Indonesian. A privacy-first Chrome extension: no network calls.",
   "keywords": [
     "chrome-extension",
     "manifest-v3",
     "thai",
+    "vietnamese",
+    "indonesian",
     "llm",
     "tokens",
     "tokenizer",

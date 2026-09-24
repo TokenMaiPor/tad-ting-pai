@@ -7,33 +7,62 @@ export interface SiteAdapter {
   label: string;
   /** Hostnames this adapter handles. */
   hosts: string[];
-  /** The element the user types into (contenteditable div or textarea), or null if not rendered yet. */
-  findInput(doc: Document): HTMLElement | null;
-  /** The element our toolbar is inserted after (usually the composer's outer container). */
-  findMountAnchor(input: HTMLElement): HTMLElement | null;
+  /** Selectors for the element the user types into, most specific first. */
+  inputSelectors: string[];
+  /**
+   * Selectors for the composer container our toolbar is inserted after, tried with
+   * `closest()` from the input. When none match, the content script shows a floating
+   * fallback button instead of guessing a spot that might break the site's layout.
+   */
+  anchorSelectors: string[];
 }
 
 export function adapterForHost(adapters: SiteAdapter[], hostname: string): SiteAdapter | undefined {
   return adapters.find((a) => a.hosts.some((h) => hostname === h || hostname.endsWith(`.${h}`)));
 }
 
-/** First element matching any selector, skipping hidden duplicates. */
-export function queryFirstVisible(doc: Document, selectors: string[]): HTMLElement | null {
+/** Which selector matched. Used by the popup's site status and by broken-site reports. */
+export interface Diagnosis {
+  input: HTMLElement | null;
+  anchor: HTMLElement | null;
+  inputSelector: string | null;
+  anchorSelector: string | null;
+}
+
+/** First visible element matching any selector, plus the selector that found it. */
+function firstVisible(
+  doc: Document,
+  selectors: string[],
+): { el: HTMLElement; selector: string } | null {
   for (const selector of selectors) {
     for (const el of Array.from(doc.querySelectorAll<HTMLElement>(selector))) {
-      if (el.isConnected && el.getClientRects().length > 0) return el;
+      if (el.isConnected && el.getClientRects().length > 0) return { el, selector };
     }
   }
   return null;
 }
 
 /** Walk up to the first ancestor matching any selector (in order of preference). */
-export function closestOf(el: HTMLElement, selectors: string[]): HTMLElement | null {
+function closestOf(
+  el: HTMLElement,
+  selectors: string[],
+): { el: HTMLElement; selector: string } | null {
   for (const selector of selectors) {
     const found = el.closest<HTMLElement>(selector);
-    if (found) return found;
+    if (found) return { el: found, selector };
   }
   return null;
+}
+
+export function diagnose(adapter: SiteAdapter, doc: Document): Diagnosis {
+  const input = firstVisible(doc, adapter.inputSelectors);
+  const anchor = input ? closestOf(input.el, adapter.anchorSelectors) : null;
+  return {
+    input: input?.el ?? null,
+    anchor: anchor?.el ?? null,
+    inputSelector: input?.selector ?? null,
+    anchorSelector: anchor?.selector ?? null,
+  };
 }
 
 // ---------- Reading and writing the chat box ----------

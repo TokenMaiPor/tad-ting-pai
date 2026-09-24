@@ -166,3 +166,119 @@ legend {
   border-color: var(--ttp-critical);
   color: var(--ttp-critical);
 }
+
+/* Site status (DESIGN.md §10): one muted line per site, warn tone when not OK. */
+.site-status {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--ttp-ink-muted);
+}
+
+.site-status li[data-tone='warn'] {
+  color: var(--ttp-warn);
+}
+
+.site-status a {
+  margin-left: 8px;
+  color: var(--ttp-ledger);
+}
+
+/* Rule toggles (DESIGN.md §10): collapsed by default so the popup stays short. */
+.rules {
+  margin: 0 0 12px;
+}
+
+.rules summary {
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.rule-group {
+  margin: 8px 0 0;
+}
+
+.rule-group legend {
+  font-size: 12px;
+  color: var(--ttp-ink-muted);
+}
+
+.rule {
+  padding: 4px 0;
+}
+
+/* Flex child must be allowed to shrink so long unspaced examples wrap inside 320px. */
+.rule > span {
+  min-width: 0;
+}
+
+.rule + .rule {
+  border-top: 1px dashed var(--ttp-rule);
+}
+
+.rule-example {
+  display: block;
+  font-family: var(--ttp-font-figures), var(--ttp-font-body);
+  font-size: 12px;
+  color: var(--ttp-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+/* 7-day strip (DESIGN.md §10): no axis, no gridlines, today in stamp red. */
+.week {
+  margin: 12px 0 0;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 32px;
+}
+
+.day {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 16px;
+  height: 100%;
+}
+
+.bar {
+  align-self: flex-end;
+  width: 8px;
+  background: var(--ttp-ledger);
+}
+
+.day[data-today] .bar {
+  background: var(--ttp-stamp);
+}
+
+/* Zero day = a 1px rule tick, never stamp red (even today). min-height beats the inline 0px. */
+.day .bar.bar-zero {
+  min-height: 1px;
+  background: var(--ttp-rule);
+}
+
+.day-label {
+  position: absolute;
+  top: 100%;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--ttp-ink-muted);
+}
+
+.week figcaption {
+  margin-top: 20px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

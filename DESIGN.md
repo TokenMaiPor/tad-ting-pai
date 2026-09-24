@@ -74,6 +74,32 @@ Don't: auto-apply or auto-send anything · use host-site colours · use icons fo
 gradients or blur · use default "AI app" tropes (purple gradients, glassmorphism, sparkle icons, Inter as display type).
 Agents: re-read this file before EVERY UI task; every value must trace to sections 2-8.
 
+## 10. v0.2 Surfaces (all values from sections 2-8)
+
+**Fallback stub** (when the site's composer container can't be found): the same receipt stub,
+shrunk to one 28px secondary button labelled "TadTingPai · Compress" (Thai: "TadTingPai · บีบข้อความ"), `position: fixed` 8px above the
+chat box's top-right corner (clamped inside the viewport). --ttp-paper fill, 1px dashed
+--ttp-rule border (the perforation), radius 4px, no shadow. Clicking it opens the normal preview.
+No icon, no floating circle, no animation beyond the panel's own.
+
+**Rule toggles** (popup): one checkbox row per rule, grouped under a 12px muted legend per
+language ("Thai · ไทย"). Row = checkbox + label (14px) + one muted 12px example line set in the
+figures font: `ครับ → (removed)` / `ทำการแก้ไข → แก้ไข`. Rows separated by 1px dashed --ttp-rule.
+The list sits in a native `<details>` ("Compression rules (9/9 on)") so the popup stays short.
+
+**7-day strip** (popup, under the hero): 7 vertical bars, 8px wide centred in 16px columns (room
+for Thai day initials), max 32px tall, gap 4px,
+--ttp-ledger fill, today's bar in --ttp-stamp. Zero days are a 1px --ttp-rule baseline tick.
+Day initials under each bar in 12px muted. Visually-hidden table carries the numbers for screen
+readers. No axis, no gridlines, no tooltip library.
+
+**Rule chips** (preview receipt row): the existing change list items restyled as 1px --ttp-rule
+outlined chips, radius 4px, 12px, `label ×N` with ×N in the figures font.
+
+**Site status line** (popup, under Sites): one 12px muted line per site, e.g.
+`ChatGPT · toolbar OK` / `· fallback button` / `· chat box not found`, warn colour for the last
+two, followed by a text link "Report a broken site" (opens a prefilled GitHub issue).
+
 ## Distinctiveness check (REQUIRED)
 
 The default for "AI helper extension" is a floating purple sparkle button with a glassy popover and
